@@ -1,22 +1,26 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
-
+name: msbuild-cmake-build-actions-workflow
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+    contents: write
     
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  
 jobs:
   build:
-    runs-on: windows-latest
-
+    strategy:
+      matrix:
+        os: [ windows-latest ] # , ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
 
@@ -34,4 +38,20 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - working-directory: ${{github.workspace}}/build
+      shell: bash
       run: ls -R
+
+# path: ${{ github.event.repository.name }}*
+    - name: Archive Release
+      uses: thedoctor0/zip-release@master
+      with:
+        type: 'zip'
+        directory: build
+        filename: "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.os }}.zip"
+        
+    - name: Release prebuilt
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "build/${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.os }}.zip"
+        allowUpdates: true
+        token: ${{ secrets.GITHUB_TOKEN }}
