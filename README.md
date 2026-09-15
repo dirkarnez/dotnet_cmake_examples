@@ -12,3 +12,6 @@ cmake ..
 cmake --build . 
 
 ```
+
+
+<!-- Security scan triggered at 2026-09-15 09:40:43 -->
